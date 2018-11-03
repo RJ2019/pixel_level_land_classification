@@ -2,6 +2,8 @@
 
 ## Provision the Geo AI Data Science VM
 
+We recommend that you provision a Geo AI Data Science VM using the [one-click provisioning solution template](https://gallery.azure.ai/Solution/Geo-AI-Data-Science-Virtual-Machine-2). However, if you prefer, you can create the VM from the Azure Portal using the instructions below:
+
 1. Log into the [Azure Portal](https://portal.azure.com) with your preferred Azure account.
 1. Click the "Create a resource" button at top left.
 1. In the marketplace search bar, type "Geo AI Data Science VM with ArcGIS" and press Enter. (Auto-completion will not work until the VM is publicly available.)
@@ -27,6 +29,6 @@ Deployment will likely take 10-20 minutes to complete. When it has finished, a l
 1. Once you have connected to your VM, click on the "Jupyter" icon on the desktop to launch a Jupyter Notebook server. 
     - This will launch a new browser window or tab showing the Notebook Dashboard, a control panel that allows you to select which notebook to open.
     - You may need to copy a URL from the auto-launched window into your preferred web browser in order to view the provided sample notebooks.
-1. Navigate to the "GeoBooks\geoaidsvm" subfolder and click on the `01_Intro_to_pixel-level_land_classification.ipynb` file to launch it.
+1. Navigate to the "notebooks\GeoBooks\AI-for-Earth" subfolder and click on the `01_Intro_to_pixel-level_land_classification.ipynb` file to launch it.
 
 This notebook will contain an explanation of the other notebooks in the subfolder, including a recommended order for reading and executing them. Note that code cells within the notebook can be executed by selecting the cell and pressing Ctrl+Enter.

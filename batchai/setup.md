@@ -18,7 +18,7 @@ This tutorial requires the following programs:
 - [Azure CLI 2.0](https://docs.microsoft.com/cli/azure/install-azure-cli)
 - [AzCopy](https://docs.microsoft.com/azure/storage/common/storage-use-azcopy)
 
-These programs are available for Windows and Linux. If you prefer not to install these programs locally, you may instead provision an [Azure Data Science Virtual Machine](https://docs.microsoft.com/azure/machine-learning/data-science-virtual-machine/provision-vm). (Both programs are pre-installed on these VMs and available on the system path.) The commands included in this tutorial were written and tested in Windows, but readers will likely find it straightforward to adapt for Linux.
+These programs are available for Windows and Linux. If you prefer not to install these programs locally, you may instead provision an [Azure Windows Data Science Virtual Machine](https://docs.microsoft.com/azure/machine-learning/data-science-virtual-machine/provision-vm). (Both programs are pre-installed on this VM type and are available on the system path.) The commands included in this tutorial were written and tested in Windows, but readers will likely find it straightforward to adapt for Linux.
 
 Once these programs are installed, open a command line interface and check that the binaries are available on the system path by issuing the commands below:
 ```
@@ -26,6 +26,8 @@ az
 azcopy
 ```
 If not, you may need to [edit the system path](http://www.zdnet.com/article/windows-10-tip-point-and-click-to-edit-the-system-path-variable/) to point to the folders containing these binaries (e.g., `C:\Program Files (x86)\Microsoft SDKs\Azure\AzCopy`) and load a fresh command prompt.
+
+This tutorial was tested using Azure CLI version 2.0.42. If you installed the Azure CLI previously, check your version number using `az --version` and upgrade if necessary.
 
 ### Prepare to use the Azure CLI
 
@@ -44,15 +46,6 @@ Identify the subscription of interest in the JSON-formatted output. Use its "id"
 az account set -s [subscription id]
 ```
 
-Register the Batch/BatchAI providers and grant Batch AI "Network Contributor" access on your subscription using the following commands. Note that you will need to copy your subscription's id in place of the bracketed expression before executing the command.
-```
-az provider register -n Microsoft.Batch
-az provider register -n Microsoft.BatchAI
-az role assignment create --scope /subscriptions/[subscription id] --role "Network Contributor" --assignee 9fcb3732-5f52-4135-8c08-9d4bbaf203ea
-```
-
-It may take ~10 minutes for the provider registration process to complete. You may proceed with the tutorial in the meantime.
-
 ## Create the necessary Azure resources
 
 ### Create an Azure resource group
@@ -69,7 +62,7 @@ You may use other locations, but we recommend `eastus` for proximity to the data
 We will create an Azure storage account to hold training and evaluation data, scripts, and output files. Choose a unique name for this storage account and insert it in place of the bracketed expression below. Then, issue the following commands to create your storage account and store its randomly-assigned access key:
 ```
 set STORAGE_ACCOUNT_NAME=[storage account name]
-az storage account create --name %STORAGE_ACCOUNT_NAME% --sku Standard_LRS --sku Standard_LRS --resource-group %AZURE_RESOURCE_GROUP% --location eastus
+az storage account create --name %STORAGE_ACCOUNT_NAME% --sku Standard_LRS --resource-group %AZURE_RESOURCE_GROUP% --location eastus
 for /f "delims=" %a in ('az storage account keys list --account-name %STORAGE_ACCOUNT_NAME% --resource-group %AZURE_RESOURCE_GROUP% --query "[0].value"') do @set STORAGE_ACCOUNT_KEY=%a
 ```
 
@@ -82,17 +75,29 @@ AzCopy /Source:https://aiforearthcollateral.blob.core.windows.net/imagesegmentat
 
 Expect the copy step to take 5-10 minutes.
 
+### Create an Azure Batch AI workspace and experiment
+
+Batch AI workspaces can contain clusters as well as experiments, which in turn organize jobs. Choose a unique name for your workspace and experiment and insert them in place of the bracketed expressions below, then run the commands to create a workspace and experiment:
+
+```
+set WORKSPACE_NAME=[your selected workspace name]
+az batchai workspace create -n %WORKSPACE_NAME% --resource-group %AZURE_RESOURCE_GROUP%
+
+set EXPERIMENT_NAME=[your selected experiment name]
+az batchai experiment create -n %EXPERIMENT_NAME% -w %WORKSPACE_NAME% --resource-group %AZURE_RESOURCE_GROUP% 
+```
+
 ### Create an Azure Batch AI cluster
 
 We will create an Azure Batch AI cluster containing two NC6 Ubuntu DSVMs. This two-GPU cluster will be used to train our model and then apply it to previously-unseen data. Before executing the command below, ensure that the `cluster.json` file provided in this repository (which specifies the Python packages that should be installed during setup) has been downloaded to your computer and is available on the path (you may need to change directories to the `batchai` folder of your cloned copy of this repository). We also recommend that you change the username and password to credentials of your choice.
 ```
-az batchai cluster create -n batchaidemo --user-name lcuser --password lcpassword --afs-name batchai --image UbuntuDSVM --vm-size STANDARD_NC6 --max 2 --min 2 --storage-account-name %STORAGE_ACCOUNT_NAME% --container-name blobfuse --container-mount-path blobfuse -c cluster.json --resource-group %AZURE_RESOURCE_GROUP% --location eastus
+az batchai cluster create -n batchaidemo --user-name lcuser --password lcpassword --afs-name batchai --image UbuntuDSVM --vm-size STANDARD_NC6 --max 2 --min 2 --storage-account-name %STORAGE_ACCOUNT_NAME% --bfs-name blobfuse --bfs-mount-path blobfuse -f cluster.json --resource-group %AZURE_RESOURCE_GROUP% -w %WORKSPACE_NAME% 
 ```
 This command will create a cluster whose credentials are a username-password pair. For increased security, we highly encourage the use of an SSH key as credential: for more information, see the [Batch AI documentation](https://github.com/Azure/BatchAI/blob/master/documentation/using-azure-cli-20.md#Admin-User-Account) and the output of the `az batchai cluster create -h` command.
 
 It will take approximately ten minutes for cluster creation to complete. You can check on progress of the provisioning process using the command below: when provisioning is complete, you should see that the "errors" field is null and that your cluster has two "idle" nodes.
 ```
-az batchai cluster show -n batchaidemo --resource-group %AZURE_RESOURCE_GROUP%
+az batchai cluster show -n batchaidemo --resource-group %AZURE_RESOURCE_GROUP% -w %WORKSPACE_NAME%
 ```
 
 ## Next steps
